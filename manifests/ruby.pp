@@ -10,9 +10,20 @@
 #
 # Usage:
 #   include 'razor::ruby'
-class razor::ruby {
+class razor::ruby (
+  $rubygems_update = undef
+) {
+  include ::ruby::params
 
-  include ::ruby
+  $rubygems_update_real = $rubygems_update ? {
+    undef   => $::ruby::params::rubygems_update,
+    default => $rubygems_update
+  }
+
+  class { '::ruby':
+    rubygems_update => $rubygems_update_real,
+  }
+
   include ::ruby::dev
 
   if ! defined(Package['make']) {
@@ -20,11 +31,17 @@ class razor::ruby {
       ensure => present,
     }
   }
-  
+
   if ! defined(Package['gcc']) {
     package { 'gcc':
       ensure => present,
     }
+  }
+
+  package { json:
+    ensure   => '1.7.7',
+    provider => gem,
+    require  => [Class['::ruby'], Class['::ruby::dev'], Package['make'], Package['gcc']]
   }
 
   package { [
@@ -33,11 +50,11 @@ class razor::ruby {
              'bson_ext',
              'colored',
              'daemons',
-             'json',
              'logger',
              'macaddr',
              'mongo',
              'net-ssh',
+             'net-scp',
              'require_all',
              'syntax',
              'uuid'

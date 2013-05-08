@@ -55,6 +55,9 @@ Puppet master, add razor class to target node:
 
 ## Parameters
 
+* source: `git`, or `package`; default: `git`
+  - this selects what installation method is used for getting Razor on the system
+  - **WARNING**: the default will change from `git` to `package` before the 1.0.0 release of the overall project.
 * username: razor daemon username, default: razor.
 * directory; installation target directory, default: /opt/razor.
 * address: razor.ipxe chain address, and razor service listen address, default: facter ipaddress.
@@ -62,20 +65,22 @@ Puppet master, add razor class to target node:
 * mk_checkin_interval: mk checkin interval, default: 60 seconds.
 * mk_name: razor tiny core linux mk name.
 * mk_source: razor mk iso source, default: [Razor-Microkernel project](https://github.com/downloads/puppetlabs/Razor-Microkernel) production iso.
-* git_source: razor git repo source, default: [Puppet Labs Razor](https://github.com/puppetlabs/Razor.git) .
+* git_source: razor git repo source, default: [Puppet Labs Razor](https://github.com/puppetlabs/Razor.git).
+  - **DEPRECATED**: this feature is deprecated in favour of package installation.
 * git_revision: razor git repo revision, default: master.
+  - **DEPRECATED**: this feature is deprecated in favour of package installation.
 
-    file { 'custom_mk.iso':
-      path   => '/var/tmp/custom_mk.iso',
-      source => 'puppet:///acme_co/files/custom_mk.iso',
-    }
+        file { 'custom_mk.iso':
+          path   => '/var/tmp/custom_mk.iso',
+          source => 'puppet:///acme_co/files/custom_mk.iso',
+        }
 
-    class { 'razor':
-      directory => '/usr/local/razor',
-      mk_name   => 'rz_mk_custom-image.0.9.0.4.iso',
-      mk_source => '/var/tmp/custom_mk.iso',
-      require   => File['custom_mk.iso'],
-    }
+        class { 'razor':
+          directory => '/usr/local/razor',
+          mk_name   => 'rz_mk_custom-image.0.9.0.4.iso',
+          mk_source => '/var/tmp/custom_mk.iso',
+          require   => File['custom_mk.iso'],
+        }
 
 ## Resources
 
@@ -96,20 +101,55 @@ rz_image allows management of images available for razor:
 
 * Although we can query uuid, it can not be specified.
 
+rz_model, rz_tag, rz_policy supports deployment of operating systems:
+
+    rz_model { 'precise_model':
+      ensure      => present,
+      description => 'Ubuntu Precise Model',
+      image       => 'precise_image',
+      metadata    => {
+        'domainname'      => 'puppetlabs.lan',
+        'hostname_prefix' => 'openstack',
+        'rootpassword'    => 'puppet',
+      },
+      template    => 'ubuntu_precise',
+    }
+
+    rz_tag { 'virtual':
+      tag_label   => 'virtual',
+      tag_matcher => [
+        { 'key'     => 'is_virtual',
+          'compare' => 'equal',
+          'value'   => 'true',
+          'inverse' => false, }
+      ],
+    }
+
+    rz_policy { 'precise_policy':
+      ensure   => 'present',
+      broker   => 'none',
+      model    => 'precise_model',
+      enabled  => 'true',
+      tags     => ['virtual'],
+      template => 'linux_deploy',
+      maximum  => 1,
+    }
+
+    rz_broker { 'demo':
+      plugin  => 'puppet',
+      metadata => {
+        version => '3.0.2',
+        server  => 'puppet.dmz25.lab',
+      }
+    }
+
+Additional examples can be found in the tests directory. Currently rz\_\* resources only creates/delete configuration, and does not manage(maintain) razor configuration.
+
 ## Usage
 
 See [Razor](https://github.com/puppetlabs/Razor) and [Razor wiki pages](https://github.com/puppetlabs/Razor/wiki)
 
 ## Contributors
 
-Special thanks to Craig Dunn [@crayfishx](https://github.com/crayfishx) for adding RHEL support for razor dependency modules.
-
-Bill ONeill <woneill@pobox.com>  
-Branan Purvine-Riley <branan@puppetlabs.com>  
-Chad Metcalf <chad@wibidata.com>  
-Gary Larizza <gary@puppetlabs.com>  
-geauxvirtual <justin.guidroz@gmail.com>  
-Pierre-Yves Ritschard <pyr@spootnik.org>  
-Rémi <remi@binbash.fr>  
-Stephen Johnson <stephen@puppetlabs.com> <steve@thatbytes.co.uk>  
-Street Preacher <preachermanx@gmail.com>  
+A wide array of folks have contributed to the Razor module, including a pile
+of hugely valuable external contributions.  The list was getting too long to maintain inline, but you can see the full list of contributors in the `CONTRIBUTORS` file.
